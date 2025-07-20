@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=database-1.cyxm60si8u5p.us-east-1.rds.amazonaws.com
+      - DB_PORT=3306
+      - DB_NAME=dojeon
+      - DB_USERNAME=admin
+      - DB_PASSWORD=Parksunmi2097!
+    restart: unless-stopped
+    networks:
+      - dojeon-network
+
+networks:
+  dojeon-network:
+    driver: bridge 
