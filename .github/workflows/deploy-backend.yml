@@ -48,8 +48,8 @@ jobs:
           
           # Stop existing container
           echo "Stopping existing container..."
-          docker stop dojeon-backend || echo "No existing container to stop"
-          docker rm dojeon-backend || echo "No existing container to remove"
+          sudo docker stop dojeon-backend || echo "No existing container to stop"
+          sudo docker rm dojeon-backend || echo "No existing container to remove"
           
           # Remove old code
           echo "Removing old code..."
@@ -87,12 +87,12 @@ jobs:
           
           # Build Docker image
           echo "Building Docker image..."
-          docker build -t dojeon-backend:latest .
+          sudo docker build -t dojeon-backend:latest .
           echo "Docker build completed"
           
           # Run new container
           echo "Starting new container..."
-          docker run -d \
+          sudo docker run -d \
             --name dojeon-backend \
             --restart unless-stopped \
             -p 8080:8080 \
@@ -105,15 +105,15 @@ jobs:
           # Verify container is running
           echo "Verifying container status..."
           sleep 10
-          docker ps | grep dojeon-backend || echo "Container not found in docker ps"
+          sudo docker ps | grep dojeon-backend || echo "Container not found in docker ps"
           
           # Check container logs
           echo "Container logs:"
-          docker logs dojeon-backend --tail 20 || echo "Failed to get container logs"
+          sudo docker logs dojeon-backend --tail 20 || echo "Failed to get container logs"
           
           # Clean up old images
           echo "Cleaning up old images..."
-          docker image prune -f
+          sudo docker image prune -f
           
           echo "=== Deployment completed at $(date) ==="
           
