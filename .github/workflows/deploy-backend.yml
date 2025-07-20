@@ -25,38 +25,65 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
+          # Enable error logging
+          set -e
+          exec 2> >(tee /tmp/deploy_error.log >&2)
+          
+          echo "=== Starting deployment at $(date) ==="
+          
           # Create app directory
+          echo "Creating app directory..."
           mkdir -p /home/ec2-user/dojeon-backend
           cd /home/ec2-user/dojeon-backend
+          echo "Current directory: $(pwd)"
           
           # Stop existing container
-          docker stop dojeon-backend || true
-          docker rm dojeon-backend || true
+          echo "Stopping existing container..."
+          docker stop dojeon-backend || echo "No existing container to stop"
+          docker rm dojeon-backend || echo "No existing container to remove"
           
           # Remove old code
+          echo "Removing old code..."
           rm -rf *
           
           # Clone latest code
+          echo "Cloning latest code..."
           git clone https://github.com/kwohyuno/dojeon-BE.git .
+          echo "Git clone completed"
           
-          # Install Java 17 if not exists
+          # Check Java installation
+          echo "Checking Java installation..."
           if ! command -v java &> /dev/null; then
+            echo "Installing Java 17..."
             sudo yum update -y
             sudo yum install -y java-17-amazon-corretto
+            echo "Java installation completed"
+          else
+            echo "Java already installed: $(java -version)"
           fi
           
-          # Install Maven if not exists
+          # Check Maven installation
+          echo "Checking Maven installation..."
           if ! command -v mvn &> /dev/null; then
+            echo "Installing Maven..."
             sudo yum install -y maven
+            echo "Maven installation completed"
+          else
+            echo "Maven already installed: $(mvn -version)"
           fi
           
           # Build with Maven
+          echo "Building with Maven..."
           ./mvnw clean package -DskipTests
+          echo "Maven build completed"
           
           # Build Docker image
+          echo "Building Docker image..."
           docker build -t dojeon-backend:latest .
+          echo "Docker build completed"
           
           # Run new container
+          echo "Starting new container..."
           docker run -d \
             --name dojeon-backend \
             --restart unless-stopped \
@@ -67,5 +94,23 @@ jobs:
             -e SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }} \
             dojeon-backend:latest
           
+          # Verify container is running
+          echo "Verifying container status..."
+          sleep 10
+          docker ps | grep dojeon-backend || echo "Container not found in docker ps"
+          
+          # Check container logs
+          echo "Container logs:"
+          docker logs dojeon-backend --tail 20 || echo "Failed to get container logs"
+          
           # Clean up old images
-          docker image prune -f 
+          echo "Cleaning up old images..."
+          docker image prune -f
+          
+          echo "=== Deployment completed at $(date) ==="
+          
+          # Show error log if exists
+          if [ -f /tmp/deploy_error.log ]; then
+            echo "=== Error Log ==="
+            cat /tmp/deploy_error.log
+          fi 
