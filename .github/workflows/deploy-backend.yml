@@ -1,0 +1,71 @@
+name: Deploy Backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'production'
+    
+    steps:
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Create app directory
+          mkdir -p /home/ec2-user/dojeon-backend
+          cd /home/ec2-user/dojeon-backend
+          
+          # Stop existing container
+          docker stop dojeon-backend || true
+          docker rm dojeon-backend || true
+          
+          # Remove old code
+          rm -rf *
+          
+          # Clone latest code
+          git clone https://github.com/kwohyuno/dojeon-BE.git .
+          
+          # Install Java 17 if not exists
+          if ! command -v java &> /dev/null; then
+            sudo yum update -y
+            sudo yum install -y java-17-amazon-corretto
+          fi
+          
+          # Install Maven if not exists
+          if ! command -v mvn &> /dev/null; then
+            sudo yum install -y maven
+          fi
+          
+          # Build with Maven
+          ./mvnw clean package -DskipTests
+          
+          # Build Docker image
+          docker build -t dojeon-backend:latest .
+          
+          # Run new container
+          docker run -d \
+            --name dojeon-backend \
+            --restart unless-stopped \
+            -p 8080:8080 \
+            -e SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
+            -e SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
+            -e SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
+            -e SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }} \
+            dojeon-backend:latest
+          
+          # Clean up old images
+          docker image prune -f 
