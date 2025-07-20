@@ -47,3 +47,6 @@ aws-credentials
 # Temporary files
 *.tmp
 *.temp
+
+#docker-compose
+docker-compose.yml
