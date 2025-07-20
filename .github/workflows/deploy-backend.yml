@@ -40,20 +40,13 @@ jobs:
           sudo usermod -aG docker ec2-user
           echo "Dependency installation completed"
 
-          # Create app directory
-          echo "Creating app directory..."
-          mkdir -p /home/ec2-user/dojeon-backend
-          cd /home/ec2-user/dojeon-backend
-          echo "Current directory: $(pwd)"
-          
-          # Stop existing container
-          echo "Stopping existing container..."
-          sudo docker stop dojeon-backend || echo "No existing container to stop"
-          sudo docker rm dojeon-backend || echo "No existing container to remove"
-          
-          # Remove old code
-          echo "Removing old code..."
-          rm -rf *
+          # Remove old code completely
+          echo "Cleaning up previous deployment..."
+          cd /home/ec2-user
+          sudo rm -rf dojeon-backend
+          mkdir -p dojeon-backend
+          cd dojeon-backend
+          echo "Cleaned and entered: $(pwd)"
           
           # Clone latest code
           echo "Cloning latest code..."
@@ -84,6 +77,11 @@ jobs:
           echo "Building with Maven..."
           ./mvnw clean package -DskipTests
           echo "Maven build completed"
+          
+          # Stop existing container
+          echo "Stopping existing container..."
+          sudo docker stop dojeon-backend || echo "No existing container to stop"
+          sudo docker rm dojeon-backend || echo "No existing container to remove"
           
           # Build Docker image
           echo "Building Docker image..."
