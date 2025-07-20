@@ -31,6 +31,15 @@ jobs:
           
           echo "=== Starting deployment at $(date) ==="
           
+          # Install dependencies (Docker, Git)
+          echo "Installing required packages..."
+          sudo yum update -y
+          sudo yum install -y git docker yum-utils
+          sudo systemctl start docker
+          sudo systemctl enable docker
+          sudo usermod -aG docker ec2-user
+          echo "Dependency installation completed"
+
           # Create app directory
           echo "Creating app directory..."
           mkdir -p /home/ec2-user/dojeon-backend
@@ -55,7 +64,6 @@ jobs:
           echo "Checking Java installation..."
           if ! command -v java &> /dev/null; then
             echo "Installing Java 17..."
-            sudo yum update -y
             sudo yum install -y java-17-amazon-corretto
             echo "Java installation completed"
           else
@@ -113,4 +121,4 @@ jobs:
           if [ -f /tmp/deploy_error.log ]; then
             echo "=== Error Log ==="
             cat /tmp/deploy_error.log
-          fi 
+          fi
